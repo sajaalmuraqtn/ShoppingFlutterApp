@@ -59,16 +59,24 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
     await controller.updateProduct(updated);
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("تم التعديل على المنتج بنجاح"),backgroundColor: Colors.green),
-      );
+      SnackBar(
+        content: Text("تم التعديل على المنتج بنجاح"),
+        backgroundColor: Colors.green,
+      ),
+    );
     Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kBackgroundColor,
+
       appBar: AppBar(
-        title: const Text("تعديل المنتج", style: TextStyle(color: kBackgroundColor)),
+        title: const Text(
+          "تعديل المنتج",
+          style: TextStyle(color: kBackgroundColor),
+        ),
         backgroundColor: kPrimaryColor,
       ),
       body: Padding(
@@ -77,52 +85,78 @@ class _EditProductScreenState extends State<EditProductScreen> {
           key: _formKey,
           child: ListView(
             children: [
-               ClipRRect(
-                 borderRadius: const BorderRadius.vertical(
-                   top: Radius.circular(12),
-                   bottom: Radius.circular(12),
-                 ),
-                 child: widget.product.image.contains('assets/')? Image.asset(widget.product.image ,height: 250,):Image.network(widget.product.image, fit: BoxFit.cover,width: 30),
-               ),
-             const  SizedBox(height: 50,),
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                  bottom: Radius.circular(12),
+                ),
+                child: (() {
+                  final img = widget.product.image;
+                  if (img.contains('assets/')) {
+                    return Image.asset(img, height: 250, fit: BoxFit.contain);
+                  } else if (Uri.tryParse(img)?.hasAbsolutePath ?? false) {
+                    return Image.network(img, height: 250, fit: BoxFit.contain);
+                  } else {
+                    // الصورة الافتراضية إذا الرابط غير صالح
+                    return Container(
+                      height: 250,
+                      color: Colors.grey[300],
+                      alignment: Alignment.center,
+                      child: const Text(
+                        "لا توجد صورة",
+                        style: TextStyle(color: Colors.black54, fontSize: 18),
+                      ),
+                    );
+                  }
+                })(),
+              ),
+              const SizedBox(height: 50),
               // العنوان
               TextFormField(
                 controller: title,
                 decoration: const InputDecoration(labelText: "العنوان"),
-                validator: (value) =>
-                    value == null || value.isEmpty ? "الرجاء إدخال العنوان" : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? "الرجاء إدخال العنوان"
+                    : null,
               ),
-            const  SizedBox(height: 10,),
+              const SizedBox(height: 10),
 
               TextFormField(
                 controller: subTitle,
                 decoration: const InputDecoration(labelText: "العنوان الفرعي"),
-                validator: (value) =>
-                    value == null || value.isEmpty ? "الرجاء إدخال العنوان الفرعي" : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? "الرجاء إدخال العنوان الفرعي"
+                    : null,
               ),
-             const  SizedBox(height: 10,),
+              const SizedBox(height: 10),
 
               TextFormField(
                 controller: description,
                 decoration: const InputDecoration(labelText: "الوصف"),
-                validator: (value) =>
-                    value == null || value.isEmpty ? "الرجاء إدخال الوصف" : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? "الرجاء إدخال الوصف"
+                    : null,
               ),
-             const  SizedBox(height: 10,),
+              const SizedBox(height: 10),
 
               // رابط الصورة
               TextFormField(
                 controller: image,
                 decoration: const InputDecoration(labelText: "رابط الصورة"),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return "الرجاء إدخال رابط الصورة";
-                  if (!Uri.tryParse(value)!.isAbsolute && !value.contains('assets/')) {
-                    return "رابط الصورة غير صالح";
+                  if (value == null || value.isEmpty)
+                    return "الرجاء إدخال رابط الصورة";
+
+                  // تحقق إذا كان رابط URL صالح
+                  final uri = Uri.tryParse(value);
+                  if ((uri?.isAbsolute ?? false) || value.contains('assets/')) {
+                    return null; // رابط صالح
                   }
-                  return null;
+
+                  return "رابط الصورة غير صالح، يجب أن يكون URL أو مسار assets/";
                 },
               ),
-                const  SizedBox(height: 10,),
+              const SizedBox(height: 10),
 
               // السعر
               TextFormField(
@@ -130,12 +164,14 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: "السعر"),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return "الرجاء إدخال السعر";
-                  if (int.tryParse(value) == null) return "السعر يجب أن يكون رقم صحيح";
+                  if (value == null || value.isEmpty)
+                    return "الرجاء إدخال السعر";
+                  if (int.tryParse(value) == null)
+                    return "السعر يجب أن يكون رقم صحيح";
                   return null;
                 },
               ),
-                const  SizedBox(height: 10,),
+              const SizedBox(height: 10),
 
               // التصنيف
               DropdownButtonFormField(

@@ -22,30 +22,5 @@ class FirebaseProductService {
   Future<void> deleteProduct(String id) async {
     await collection.doc(id).delete();
   }
-  
- static  Future<void> syncLikesToFirestore() async {
-  final userId =await UserSession.getUserId();
-  if (userId == null) return;
-
-  final likedIds = await LikeController.getLikedProducts(userId);
-
-  final firestore = FirebaseFirestore.instance;
-  final batch = firestore.batch();
-
-  for (var productId in likedIds) {
-    final docRef = firestore.collection('likes').doc('${userId}_$productId');
-    batch.set(docRef, {
-      'userId': userId,
-      'productId': productId,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-  }
-
-  try {
-    await batch.commit();
-    print("All likes synced to Firestore!");
-  } catch (e) {
-    print("Error syncing likes: $e");
-  }
-}
+   
 }

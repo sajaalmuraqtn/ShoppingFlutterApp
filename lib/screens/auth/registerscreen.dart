@@ -50,6 +50,8 @@ void register() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+            backgroundColor: kBackgroundColor,
+
       appBar: AppBar(title: Text("تسجيل حساب جديد",style: TextStyle(color: kBackgroundColor),),backgroundColor: kPrimaryColor,),
       body: Padding(
         padding: const EdgeInsets.all(20),

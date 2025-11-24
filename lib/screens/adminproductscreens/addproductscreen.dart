@@ -44,15 +44,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
 
     await controller.createProduct(p);
-     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("تمت إضافة منتج بنجاح"),backgroundColor: Colors.green),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("تمت إضافة منتج بنجاح"),
+        backgroundColor: Colors.green,
+      ),
+    );
     Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kBackgroundColor,
+
       appBar: AppBar(
         title: const Text(
           "إضافة منتج",
@@ -77,8 +82,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
               TextFormField(
                 controller: subTitle,
                 decoration: const InputDecoration(labelText: "العنوان الفرعي"),
-                validator: (value) =>
-                    value == null || value.isEmpty ? "العنوان الفرعي مطلوب" : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? "العنوان الفرعي مطلوب"
+                    : null,
               ),
               const SizedBox(height: 10),
 
@@ -95,13 +101,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 controller: image,
                 decoration: const InputDecoration(labelText: "رابط الصورة"),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return "رابط الصورة مطلوب";
+                  if (value == null || value.isEmpty)
+                    return "الرجاء إدخال رابط الصورة";
+
+                  // تحقق إذا كان رابط URL صالح
+                  final uri = Uri.tryParse(value);
+                  if ((uri?.isAbsolute ?? false) || value.contains('assets/')) {
+                    return null; // رابط صالح
                   }
-                  if (!Uri.tryParse(value)!.isAbsolute) {
-                    return "الرابط غير صالح";
-                  }
-                  return null;
+
+                  return "رابط الصورة غير صالح، يجب أن يكون URL أو مسار assets/";
                 },
               ),
               const SizedBox(height: 10),
@@ -112,7 +121,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "السعر مطلوب";
-                  if (int.tryParse(value) == null) return "السعر يجب أن يكون رقم";
+                  if (int.tryParse(value) == null)
+                    return "السعر يجب أن يكون رقم";
                   return null;
                 },
               ),
@@ -124,8 +134,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
                 onChanged: (value) => setState(() => selectedCategory = value),
-                validator: (value) =>
-                    value == null ? "يجب اختيار تصنيف" : null,
+                validator: (value) => value == null ? "يجب اختيار تصنيف" : null,
               ),
 
               const SizedBox(height: 50),

@@ -67,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Image.asset("assets/logo.png", height: 150),
             const SizedBox(height: 30),
             const Text(
-              "أهلاً وسهلاً بكم في متجر الإلكترونيات",
+              "أهلاً وسهلاً بكم في متجرنا الإلكتروني",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -99,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               child: const Text(
-                "تصفح التطبيق",
+                "تصفح المنتجات",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),

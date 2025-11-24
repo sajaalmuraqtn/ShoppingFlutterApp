@@ -19,15 +19,25 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ProductController productController = ProductController();
+
   List<Product> products = [];
+  List<Product> filteredProducts = []; // المنتجات بعد البحث
   bool isLoggedIn = false;
   String? userId;
   bool _loading = true;
+  int likedCount = 0;
+
+  final TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _initializeApp();
+
+    // الاستماع لتغييرات البحث
+    searchController.addListener(() {
+      _searchProducts(searchController.text);
+    });
   }
 
   Future<void> _initializeApp() async {
@@ -35,25 +45,46 @@ class _HomeScreenState extends State<HomeScreen> {
     await _loadProducts();
   }
 
-Future<void> _checkLoginStatus() async {
-  isLoggedIn = await UserSession.isLoggedIn();
-  userId = await UserSession.getUserId();
+  Future<void> _checkLoginStatus() async {
+    isLoggedIn = await UserSession.isLoggedIn();
+    userId = await UserSession.getUserId();
 
-  setState(() {}); // تحديث الواجهة بعد الحصول على القيم
-  print("issss login $isLoggedIn");
-}
+    if (isLoggedIn && userId != null) {
+      likedCount = await LikeController.getLikesCount(userId!);
+    } else {
+      likedCount = 0;
+    }
+
+    setState(() {
+      print('issss loooogin $isLoggedIn');
+    });
+  }
+
   Future<void> _loadProducts() async {
     setState(() => _loading = true);
 
     try {
-      final id = userId?.isNotEmpty == true ? userId : null;
-      products = await productController.readAllProducts(userId: id);
+      products = await productController.readAllProducts(userId: userId);
+      filteredProducts = List.from(products); // نسخ كاملة للفلترة
     } catch (e) {
       debugPrint("Error loading products: $e");
       products = [];
+      filteredProducts = [];
     }
 
     setState(() => _loading = false);
+  }
+
+  void _searchProducts(String query) async {
+    if (query.isEmpty) {
+      filteredProducts = List.from(products);
+    } else {
+      filteredProducts = await productController.searchProducts(
+        query,
+        userId: userId,
+      );
+    }
+    setState(() {});
   }
 
   Future<void> _handleLike(Product p) async {
@@ -65,16 +96,12 @@ Future<void> _checkLoginStatus() async {
     }
 
     await LikeController.toggleLike(userId!, p);
-
-    setState(() {
-      p.isLiked = !p.isLiked;
-    });
+    likedCount = await LikeController.getLikesCount(userId!);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    int likedCount = products.where((p) => p.isLiked).length;
-
     return Scaffold(
       backgroundColor: kPrimaryColor,
       appBar: AppBar(
@@ -84,9 +111,12 @@ Future<void> _checkLoginStatus() async {
           isLoggedIn
               ? "تصفح المنتجات المتنوعة"
               : "مرحباً بكم في متجرنا الإلكتروني",
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        actions: [
+          actions: [
           if (!isLoggedIn)
             IconButton(
               onPressed: () {
@@ -97,6 +127,7 @@ Future<void> _checkLoginStatus() async {
               },
               icon: const Icon(Icons.login, color: Colors.white),
             ),
+
           if (isLoggedIn) ...[
             IconButton(
               onPressed: () {
@@ -107,12 +138,21 @@ Future<void> _checkLoginStatus() async {
               },
               icon: const Icon(Icons.person, color: Colors.white),
             ),
+
             IconButton(
               onPressed: () {
-                Navigator.push(
+                Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const LikedProductsScreen()),
-                );
+                  MaterialPageRoute(
+                    builder: (_) => const LikedProductsScreen(),
+                  ),
+                ).then((_) async {
+                  // تحديث العداد عند العودة من صفحة اللايكات
+                  if (userId != null) {
+                    likedCount = await LikeController.getLikesCount(userId!);
+                    setState(() {});
+                  }
+                });
               },
               icon: Stack(
                 children: [
@@ -129,7 +169,10 @@ Future<void> _checkLoginStatus() async {
                         ),
                         child: Text(
                           likedCount.toString(),
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -144,6 +187,23 @@ Future<void> _checkLoginStatus() async {
         child: Column(
           children: [
             const SizedBox(height: kDefaultPadding / 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: kDefaultPadding),
+              child: TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: "ابحث عن منتج...",
+                  prefixIcon: const Icon(Icons.search, color: kPrimaryColor),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             Expanded(
               child: Stack(
                 children: [
@@ -158,28 +218,33 @@ Future<void> _checkLoginStatus() async {
                     ),
                   ),
                   _loading
-                      ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
-                      : products.isEmpty
-                          ? const Center(child: Text("لا توجد منتجات"))
-                          : ListView.builder(
-                              itemCount: products.length,
-                              itemBuilder: (context, index) {
-                                final p = products[index];
-                                return ProductCard(
-                                  itemIndex: index,
-                                  product: p,
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => DetailsScreen(product: p),
-                                      ),
-                                    ).then((_) => _loadProducts());
-                                  },
-                                  onLikeChanged: () => _handleLike(p),
-                                );
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: kPrimaryColor,
+                          ),
+                        )
+                      : filteredProducts.isEmpty
+                      ? const Center(child: Text("لا توجد منتجات"))
+                      : ListView.builder(
+                          itemCount: filteredProducts.length,
+                          itemBuilder: (context, index) {
+                            final p = filteredProducts[index];
+                            return ProductCard(
+                              itemIndex: index,
+                              product: p,
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        DetailsScreen(product: p),
+                                  ),
+                                ).then((_) => _loadProducts());
                               },
-                            ),
+                              onLikeChanged: () => _handleLike(p),
+                            );
+                          },
+                        ),
                 ],
               ),
             ),

@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:electrical_store_mobile_app/helpers/constants.dart';
-import 'package:electrical_store_mobile_app/logic/controller/product_controller.dart';
+import 'package:electrical_store_mobile_app/logic/controller/likecontroller.dart';
+import 'package:electrical_store_mobile_app/logic/models/auth/user_session.dart';
 import 'package:electrical_store_mobile_app/logic/models/product.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-
 
 class ProductCard extends StatefulWidget {
   final int itemIndex;
   final Product product;
   final Function() onPressed;
-  final Future<void> Function() onLikeChanged; // 🔥 إخطار parent
+  final Future<void> Function() onLikeChanged;
 
   const ProductCard({
     super.key,
@@ -29,6 +28,10 @@ class _ProductCardState extends State<ProductCard>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
+  bool checkingLocalLike = true;
+  late bool isLiked;
+  int likesCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -40,51 +43,98 @@ class _ProductCardState extends State<ProductCard>
       upperBound: 1.0,
     );
 
-    _scaleAnimation =
-        CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+
+    _initLikeStatus(); // 🔥 تهيئة حالة اللايك وعدد اللايكات
   }
 
+  // --------------------------------------------
+  // 🔥 تهيئة حالة اللايك وعدد اللايكات
+  // --------------------------------------------
+  Future<void> _initLikeStatus() async {
+    final userId = await UserSession.getUserId();
+
+    // ⚠️ تحقق من أن product.id ليس null
+    if (widget.product.id == null) {
+      likesCount = 0;
+      isLiked = false;
+      setState(() {
+        checkingLocalLike = false;
+      });
+      return;
+    }
+
+    // عدد اللايكات للمنتج
+    likesCount = await LikeController.getProductLikesCount(widget.product.id!);
+
+    // حالة اللايك الخاصة بالمستخدم إذا مسجّل دخول
+    if (userId != null) {
+      isLiked = await LikeController.isProductLiked(userId, widget.product.id!);
+    } else {
+      isLiked = false;
+    }
+
+    setState(() {
+      checkingLocalLike = false;
+    });
+  }
+
+  // --------------------------------------------
+  // ❤️ عند الضغط على زر Like
+  // --------------------------------------------
   void onLikePressed() async {
-    // Animation
     _controller.forward().then((value) => _controller.reverse());
 
-    // Toggle like locally
-    setState(() {
-      widget.product.isLiked = !widget.product.isLiked;
-    });
-
-    // إخطار الـ parent لإعادة تحميل البيانات في حال الحاجة
+    // تنفيذ تغيير اللايك من HomeScreen
     await widget.onLikeChanged();
+
+    // إعادة تحديث عدد اللايكات وحالة اللايك
+    await _initLikeStatus();
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
+        // ---------------------- CARD ----------------------
         InkWell(
           onTap: widget.onPressed,
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: kDefaultPadding, vertical: 10),
+            margin: const EdgeInsets.symmetric(
+              horizontal: kDefaultPadding,
+              vertical: 10,
+            ),
             height: 190,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               color: Colors.white,
               boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 10)),
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
               ],
             ),
             child: Row(
               children: [
-                // Image
+                // IMAGE
                 Expanded(
                   flex: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
-                    child: widget.product.image.contains('assets/')?  Image.asset(widget.product.image, fit: BoxFit.cover):CachedNetworkImage(imageUrl: widget.product.image,fit:  BoxFit.cover)   ,
+                    child: widget.product.image.contains('assets/')
+                        ? Image.asset(widget.product.image, fit: BoxFit.cover)
+                        : CachedNetworkImage(
+                            imageUrl: widget.product.image,
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 ),
-
-                // Info
+                // INFO
                 Expanded(
                   flex: 6,
                   child: Padding(
@@ -93,13 +143,23 @@ class _ProductCardState extends State<ProductCard>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(widget.product.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 20)),
+                        Text(
+                          widget.product.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
                         const SizedBox(height: 15),
                         Text(widget.product.subTitle),
-                        Text(widget.product.category,style:TextStyle(color: kSecondaryColor) ,),
-                        Text("السعر: ${widget.product.price}\$",
-                            style: const TextStyle(color: kPrimaryColor)),
+                        Text(
+                          widget.product.category,
+                          style: const TextStyle(color: kSecondaryColor),
+                        ),
+                        Text(
+                          "السعر: ${widget.product.price}\$",
+                          style: const TextStyle(color: kPrimaryColor),
+                        ),
                       ],
                     ),
                   ),
@@ -109,21 +169,65 @@ class _ProductCardState extends State<ProductCard>
           ),
         ),
 
-        // ❤️ Like Button
+        // ---------------------- LIKE BUTTON + COUNT ----------------------
         Positioned(
           top: 10,
-          right: 25,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: GestureDetector(
-              onTap: onLikePressed,
-              child: Icon(
-                widget.product.isLiked ? Icons.favorite : Icons.favorite_border,
-                color: widget.product.isLiked ? Colors.red : Colors.grey,
-                size: 32,
-              ),
-            ),
-          ),
+          left: 25,
+          child: checkingLocalLike
+              ? const CircularProgressIndicator(strokeWidth: 2)
+              : FutureBuilder<bool>(
+                  future: UserSession.isLoggedIn(),
+                  builder: (context, snapshot) {
+                    final loggedIn = snapshot.data ?? false;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          // 🔥 عدد اللايكات يظهر دائمًا
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Text(
+                              likesCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+
+                          // ❤️ القلب
+                          ScaleTransition(
+                            scale: _scaleAnimation,
+                            child: GestureDetector(
+                              onTap: loggedIn
+                                  ? onLikePressed
+                                  : null, // الضغط فقط عند تسجيل الدخول
+                              child: Icon(
+                                loggedIn
+                                    ? (isLiked
+                                          ? Icons.favorite
+                                          : Icons
+                                                .favorite_border) // إذا مسجل دخول
+                                    : Icons
+                                          .favorite, // إذا غير مسجل دخول → دائمًا أحمر
+                                color: loggedIn
+                                    ? (isLiked
+                                          ? Colors.red
+                                          : Colors.grey) // مستخدم مسجل
+                                    : Colors.red, // غير مسجل → أحمر دائمًا
+                                size: 32,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );

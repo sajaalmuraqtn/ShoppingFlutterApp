@@ -17,22 +17,45 @@ class AdminProductsScreen extends StatefulWidget {
 class _AdminProductsScreenState extends State<AdminProductsScreen> {
   final ProductController _controller = ProductController();
 
-  Future<List<Product>> _loadProducts() async {
-    return await _controller.readAllProducts(userId: '');
+  List<Product> _products = [];
+  List<Product> _filteredProducts = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() => _loading = true);
+    _products = await _controller.readAllProducts(userId: '');
+    _filteredProducts = List.from(_products);
+    setState(() => _loading = false);
   }
 
   Future<void> _deleteProduct(String id) async {
     await _controller.deleteProduct(id);
-    setState(() {}); // إعادة بناء لإعادة تحميل FutureBuilder
+    await _loadProducts();
+  }
+
+  void _searchProducts(String query) async {
+    if (query.isEmpty) {
+      _filteredProducts = List.from(_products);
+    } else {
+      _filteredProducts = await _controller.searchProducts(query, userId: '');
+    }
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kBackgroundColor,
       appBar: AppBar(
         title: const Text("لوحة تحكم المنتجات", style: TextStyle(color: kBackgroundColor)),
         backgroundColor: kPrimaryColor,
-        actions: [
+          actions: [
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -40,41 +63,41 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                 MaterialPageRoute(builder: (_) => ProfileScreen()),
               );
             },
-            icon: const Icon(Icons.person_rounded),
+            icon: const Icon(Icons.person_rounded,color: kBackgroundColor),
           ),
         ],
       ),
-      body: FutureBuilder<List<Product>>(
-        future: _loadProducts(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("حدث خطأ: ${snapshot.error}"));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("لا توجد منتجات"));
-          } else {
-            final _products = snapshot.data!;
-            return Column(
-              children: [
-                const SizedBox(height: 10),
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.65,
-                    ),
-                    itemCount: _products.length,
-                    itemBuilder: (context, index) => _buildProductCard(_products[index]),
-                  ),
-                ),
-              ],
-            );
-          }
-        },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: "ابحث عن منتج أو تصنيف",
+                prefixIcon: Icon(Icons.search,color: kPrimaryColor,),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: _searchProducts,
+            ),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredProducts.isEmpty
+                    ? const Center(child: Text("لا توجد منتجات"))
+                    : GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.65,
+                        ),
+                        itemCount: _filteredProducts.length,
+                        itemBuilder: (context, index) => _buildProductCard(_filteredProducts[index]),
+                      ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -82,7 +105,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
             context,
             MaterialPageRoute(builder: (_) => const AddProductScreen()),
           );
-          if (result == true) setState(() {});
+          if (result == true) await _loadProducts();
         },
         backgroundColor: kPrimaryColor,
         child: const Icon(Icons.add),
@@ -101,10 +124,10 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
               child: p.image.contains('assets/')
-                  ? Image.asset(p.image, fit: BoxFit.cover)
+                  ? Image.asset(p.image, fit: BoxFit.contain)
                   : CachedNetworkImage(
                       imageUrl: p.image,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                       errorWidget: (context, url, error) => const Icon(Icons.error),
                     ),
@@ -116,12 +139,9 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(p.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
                 Text(p.subTitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
                 Text(p.category, style: const TextStyle(color: kSecondaryColor)),
-                const SizedBox(height: 8),
                 Text("${p.price} \$", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -132,7 +152,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                           context,
                           MaterialPageRoute(builder: (_) => EditProductScreen(product: p)),
                         );
-                        if (result == true) setState(() {});
+                        if (result == true) await _loadProducts();
                       },
                     ),
                     IconButton(

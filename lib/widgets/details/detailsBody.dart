@@ -1,7 +1,6 @@
 import 'package:electrical_store_mobile_app/helpers/constants.dart';
 import 'package:electrical_store_mobile_app/logic/models/product.dart';
-import 'package:electrical_store_mobile_app/widgets/details/colorDot.dart';
-import 'package:electrical_store_mobile_app/widgets/details/productImage.dart';
+ import 'package:electrical_store_mobile_app/widgets/details/productImage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -29,20 +28,7 @@ class Detailsbody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
             Center(child:ProductImage(size: size, image:product.image) ,)  ,
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: kDefaultPadding),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Colordot(fillColor: kTextLightColor, isSelected: true),
-                    Colordot(fillColor: Colors.blueAccent, isSelected: false),
-                    Colordot(
-                      fillColor: CupertinoColors.destructiveRed,
-                      isSelected: false,
-                    ),
-                  ],
-                ),
-              ),
+             
               Padding(
                 padding: const EdgeInsets.symmetric(
                   vertical: kDefaultPadding/2,
@@ -55,7 +41,7 @@ class Detailsbody extends StatelessWidget {
 
               Text('السعر ${ product.price }\$ ',
               style: TextStyle(
-                fontSize: 28.0,
+                fontSize: 25.0,
                 fontWeight: FontWeight.w600,
                 color: kSecondaryColor
               ),

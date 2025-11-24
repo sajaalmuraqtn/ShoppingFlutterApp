@@ -16,30 +16,30 @@ class ProductController {
   }
 
   // ----------- ADD PRODUCT ------------
-  Future<void> createProduct(Product product) async {
-    final db = await dbHelper.database;
-    bool online = await hasInternet();
+Future<void> createProduct(Product product) async {
+  final db = await dbHelper.database;
+  bool online = await hasInternet();
 
-    // إذا ما فيه id، ننشئ واحد
-    final String id = product.id!.isEmpty
-        ? "p_${Random().nextInt(999999999)}"
-        : product.id!;
+  // 🔥 إصلاح المشكلة: تجنّب استخدام ! عندما يكون null
+  final String id = (product.id == null || product.id!.isEmpty)
+      ? "p_${Random().nextInt(999999999)}"
+      : product.id!;
 
-    final data = product.toMap()..["id"] = id;
+  final data = product.toMap()..["id"] = id;
 
-    if (online) {
-      await firebase.addProduct(data);
-      data["syncStatus"] = 0;
-    } else {
-      data["syncStatus"] = 1;
-    }
-
-    await db.insert(
-      "products",
-      data,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+  if (online) {
+    await firebase.addProduct(data);
+    data["syncStatus"] = 0;
+  } else {
+    data["syncStatus"] = 1;
   }
+
+  await db.insert(
+    "products",
+    data,
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
+}
 
   // ----------- UPDATE PRODUCT ------------
   Future<void> updateProduct(Product product) async {
@@ -124,6 +124,36 @@ class ProductController {
 
     return result.map((e) => Product.fromMap(e)).toList();
   }
+// ----------- SEARCH PRODUCTS (local DB) ------------
+Future<List<Product>> searchProducts(String query, {String? userId}) async {
+  final db = await dbHelper.database;
+
+  if (query.isEmpty) {
+    // إذا البحث فارغ، ارجع كل المنتجات
+    return readAllProducts( );
+  }
+
+  final q = '%${query.toLowerCase()}%';
+  final id = userId?.isNotEmpty == true ? userId : null;
+
+  final result = await db.rawQuery("""
+    SELECT 
+      p.*, 
+      CASE 
+        WHEN l.productId IS NOT NULL THEN 1 
+        ELSE 0 
+      END AS isLiked
+    FROM products p
+    LEFT JOIN likes l
+      ON l.productId = p.id
+      ${id != null ? "AND l.userId = ?" : ""}
+    WHERE LOWER(p.title) LIKE ? 
+       OR LOWER(p.subTitle) LIKE ? 
+       OR LOWER(p.category) LIKE ?
+  """, id != null ? [id, q, q, q] : [q, q, q]);
+
+  return result.map((e) => Product.fromMap(e)).toList();
+}
 
 
   // ----------- SYNC OFFLINE DATA ------------

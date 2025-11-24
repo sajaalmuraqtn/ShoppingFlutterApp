@@ -1,11 +1,11 @@
 import 'package:electrical_store_mobile_app/helpers/constants.dart';
 import 'package:electrical_store_mobile_app/logic/controller/likecontroller.dart';
 import 'package:electrical_store_mobile_app/logic/models/auth/user_session.dart';
+import 'package:electrical_store_mobile_app/screens/userscreens/homeScreen.dart';
 import 'package:flutter/material.dart';
-import 'package:electrical_store_mobile_app/logic/controller/product_controller.dart';
 import 'package:electrical_store_mobile_app/widgets/homeWidgets/productCard.dart';
 import 'package:electrical_store_mobile_app/logic/models/product.dart';
- 
+
 class LikedProductsScreen extends StatefulWidget {
   const LikedProductsScreen({super.key});
 
@@ -14,11 +14,10 @@ class LikedProductsScreen extends StatefulWidget {
 }
 
 class _LikedProductsScreenState extends State<LikedProductsScreen> {
-  final ProductController productController = ProductController();
   List<Product> products = [];
   bool isLoading = true;
-  String? user_id;
-
+  String? userId;
+ 
   @override
   void initState() {
     super.initState();
@@ -26,30 +25,40 @@ class _LikedProductsScreenState extends State<LikedProductsScreen> {
   }
 
   Future<void> _initialize() async {
-    
-    user_id =  await UserSession.getUserId() ;
+    userId = await UserSession.getUserId();
+    await LikeController.syncLikesToFirestore(); // مزامنة عند فتح الشاشة
     await loadLiked();
   }
 
   Future<void> loadLiked() async {
-    if (user_id == null) return;
-    setState(() => isLoading = true);
-    products = await LikeController.getLikedProducts(user_id!);
+    if (userId == null) return;
+    products = await LikeController.getLikedProducts(userId!);
     setState(() => isLoading = false);
   }
 
   Future<void> handleLike(Product p) async {
-    if (user_id == null) return;
-    await LikeController.toggleLike(user_id!, p);
-    await loadLiked(); // إعادة تحميل القائمة بعد Like/Unlike
+    if (userId == null) return;
+
+    await LikeController.toggleLike(userId!, p);
+    await LikeController.syncLikesToFirestore(); 
+    await loadLiked();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+     backgroundColor: kBackgroundColor,
+
       appBar: AppBar(
         title: const Text("المنتجات المعجب بها", style: TextStyle(color: kBackgroundColor)),
         backgroundColor: kPrimaryColor,
+        leading: IconButton(onPressed: (){
+           Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HomeScreen(),
+                  ));
+        }, icon: Icon(Icons.arrow_back)),
       ),
       body: isLoading
           ? Center(child: CircularProgressIndicator(color: kPrimaryColor))
@@ -60,9 +69,9 @@ class _LikedProductsScreenState extends State<LikedProductsScreen> {
                   itemBuilder: (context, index) {
                     final p = products[index];
                     return ProductCard(
-                      itemIndex: index,
+                       itemIndex: index,
                       product: p,
-                      onPressed: () {},
+                       onPressed: () {},
                       onLikeChanged: () => handleLike(p),
                     );
                   },
@@ -70,5 +79,3 @@ class _LikedProductsScreenState extends State<LikedProductsScreen> {
     );
   }
 }
-
- 

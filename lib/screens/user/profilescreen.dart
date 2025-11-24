@@ -34,8 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void logout() async {
-   await FirebaseProductService.syncLikesToFirestore() ; 
-    await UserSession.logout();
+     await UserSession.logout();
 
     Navigator.pushAndRemoveUntil(
       context,
@@ -47,6 +46,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+     backgroundColor: kBackgroundColor,
+
       appBar: AppBar(
         title: Text("الملف الشخصي", style: TextStyle(color: kBackgroundColor)),
         backgroundColor: kPrimaryColor,
@@ -54,7 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: isLoading
           ? Center(child: CircularProgressIndicator(color: kPrimaryColor))
           : Padding(
-              padding: const EdgeInsets.all(70),
+              padding: const EdgeInsets.all(50),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -62,12 +63,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: TextStyle(fontSize: 20)),
                   SizedBox(height: 10),
                   Text("البريد الإلكتروني: ${userEmail ?? 'غير متوفر'}",
-                      style: TextStyle(fontSize: 18)),
+                      style: TextStyle(fontSize: 20)),
                   SizedBox(height: 50),
                   ElevatedButton(
                     onPressed: logout,
+                      style: ElevatedButton.styleFrom(
+                  backgroundColor: kPrimaryColor,
+                 ),
                     child: Text("تسجيل خروج",
-                        style: TextStyle(color: kPrimaryColor)),
+                         style: TextStyle(color: kBackgroundColor, fontSize: 16)),
                   ),
                 ],
               ),
