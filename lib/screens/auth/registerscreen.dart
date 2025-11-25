@@ -59,8 +59,7 @@ void register() async {
           key: _formKey,
           child: Column(
             children: [
-              // الاسم
-              TextFormField(
+               TextFormField(
                 controller: nameController,
                 decoration: InputDecoration(labelText: "الاسم الكامل"),
                 validator: (value) {
@@ -75,8 +74,7 @@ void register() async {
               ),
              const SizedBox(height: 20),
 
-              // الإيميل
-              TextFormField(
+               TextFormField(
                 controller: emailController,
                 decoration: InputDecoration(labelText: "البريد الإلكتروني"),
                 keyboardType: TextInputType.emailAddress,
@@ -92,8 +90,7 @@ void register() async {
               ),
              const SizedBox(height: 20),
 
-              // كلمة السر
-              TextFormField(
+               TextFormField(
                 controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(labelText: "كلمة المرور"),

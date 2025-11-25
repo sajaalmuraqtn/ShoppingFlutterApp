@@ -1,6 +1,5 @@
 import 'package:electrical_store_mobile_app/helpers/constants.dart';
-import 'package:electrical_store_mobile_app/logic/firebaseServices/product.dart';
-import 'package:electrical_store_mobile_app/logic/models/auth/user_session.dart';
+ import 'package:electrical_store_mobile_app/logic/models/auth/user_session.dart';
 import 'package:electrical_store_mobile_app/screens/auth/loginscreen.dart';
 import 'package:flutter/material.dart';
 
@@ -55,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: isLoading
           ? Center(child: CircularProgressIndicator(color: kPrimaryColor))
           : Padding(
-              padding: const EdgeInsets.all(50),
+              padding: const EdgeInsets.all(40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

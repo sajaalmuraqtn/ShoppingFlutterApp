@@ -11,16 +11,13 @@ class FirebaseAuthService {
     required String password,
   }) async {
     try {
-      // التحقق من وجود المستخدم مسبقاً عبر Firebase Auth
-      final methods = await _auth.fetchSignInMethodsForEmail(email);
+       final methods = await _auth.fetchSignInMethodsForEmail(email);
       if (methods.isNotEmpty) {
         // البريد الإلكتروني موجود مسبقاً
-        print("Email already in use");
-        return null;
+         return null;
       }
 
-      // إنشاء الحساب
-      UserCredential userCred = await _auth.createUserWithEmailAndPassword(
+       UserCredential userCred = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -43,8 +40,7 @@ class FirebaseAuthService {
     }
   }
 
-  // تسجيل الدخول
-  Future<Map<String, dynamic>?> login(String email, String password) async {
+   Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
       UserCredential userCred = await _auth.signInWithEmailAndPassword(
         email: email,

@@ -3,10 +3,10 @@ class Product {
   final String title;
   final String subTitle;
   final String description;
-  final String image;
+  String image;
   final int price;
   final String category;
-  final int syncStatus; // 0 sync - 1 pending
+  final int syncStatus; //لفحص هي توجد تعديلات
   bool isLiked;
 
   Product({

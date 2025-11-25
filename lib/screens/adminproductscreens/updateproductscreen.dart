@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:electrical_store_mobile_app/helpers/constants.dart';
 import 'package:electrical_store_mobile_app/logic/controller/product_controller.dart';
 import 'package:electrical_store_mobile_app/logic/models/product.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class EditProductScreen extends StatefulWidget {
   final Product product;
@@ -16,8 +19,20 @@ class _EditProductScreenState extends State<EditProductScreen> {
   late TextEditingController title;
   late TextEditingController subTitle;
   late TextEditingController description;
-  late TextEditingController image;
   late TextEditingController price;
+  String? selectedCategory;
+  File? selectedImage;
+
+   Future<void> pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+
+    if (picked != null) {
+      setState(() {
+        selectedImage = File(picked.path);
+      });
+    }
+  }
 
   final ProductController controller = ProductController();
   final _formKey = GlobalKey<FormState>();
@@ -30,42 +45,52 @@ class _EditProductScreenState extends State<EditProductScreen> {
     "الكتب والوسائط",
   ];
 
-  String? selectedCategory;
-
+ 
   @override
   void initState() {
     super.initState();
     title = TextEditingController(text: widget.product.title);
     subTitle = TextEditingController(text: widget.product.subTitle);
     description = TextEditingController(text: widget.product.description);
-    image = TextEditingController(text: widget.product.image);
-    price = TextEditingController(text: widget.product.price.toString());
+     price = TextEditingController(text: widget.product.price.toString());
 
     selectedCategory = widget.product.category;
   }
 
   void update() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
+   
+  Product updated = Product(
+    id: widget.product.id,
+    title: title.text,
+    subTitle: subTitle.text,
+    description: description.text,
+    price: int.parse(price.text),
+     image: widget.product.image, 
+    category: selectedCategory!,
+  );
 
-    Product updated = Product(
-      id: widget.product.id,
-      title: title.text,
-      subTitle: subTitle.text,
-      description: description.text,
-      price: int.parse(price.text),
-      image: image.text,
-      category: selectedCategory!,
-    );
+  try {
+     await controller.updateProduct(updated, selectedImage);
 
-    await controller.updateProduct(updated);
+    // 3. رسالة النجاح
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text("تم التعديل على المنتج بنجاح"),
         backgroundColor: Colors.green,
       ),
     );
     Navigator.pop(context, true);
+  } catch (e) {
+    // التعامل مع الأخطاء (مثل فشل الرفع)
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("فشل التعديل: ${e.toString()}"),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +125,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     // الصورة الافتراضية إذا الرابط غير صالح
                     return Container(
                       height: 250,
-                      color: Colors.grey[300],
+                      color: const Color.fromARGB(255, 209, 199, 199),
                       alignment: Alignment.center,
                       child: const Text(
                         "لا توجد صورة",
@@ -111,8 +136,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 })(),
               ),
               const SizedBox(height: 50),
-              // العنوان
-              TextFormField(
+               TextFormField(
                 controller: title,
                 decoration: const InputDecoration(labelText: "العنوان"),
                 validator: (value) => value == null || value.isEmpty
@@ -139,27 +163,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
               ),
               const SizedBox(height: 10),
 
-              // رابط الصورة
-              TextFormField(
-                controller: image,
-                decoration: const InputDecoration(labelText: "رابط الصورة"),
-                validator: (value) {
-                  if (value == null || value.isEmpty)
-                    return "الرجاء إدخال رابط الصورة";
-
-                  // تحقق إذا كان رابط URL صالح
-                  final uri = Uri.tryParse(value);
-                  if ((uri?.isAbsolute ?? false) || value.contains('assets/')) {
-                    return null; // رابط صالح
-                  }
-
-                  return "رابط الصورة غير صالح، يجب أن يكون URL أو مسار assets/";
-                },
-              ),
-              const SizedBox(height: 10),
-
-              // السعر
-              TextFormField(
+               TextFormField(
                 controller: price,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: "السعر"),
@@ -173,8 +177,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
               ),
               const SizedBox(height: 10),
 
-              // التصنيف
-              DropdownButtonFormField(
+               DropdownButtonFormField(
                 value: selectedCategory,
                 decoration: const InputDecoration(labelText: "التصنيف"),
                 items: categories.map((c) {
@@ -184,7 +187,24 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 validator: (value) =>
                     value == null ? "الرجاء اختيار تصنيف" : null,
               ),
-
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  ElevatedButton(
+                    onPressed: pickImage,
+                    child: const Text(
+                      "رفع صورة",
+                      style: TextStyle(color: kPrimaryColor),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  if (selectedImage != null)
+                    const Text(
+                      "✔ تم اختيار صورة",
+                      style: TextStyle(color: Colors.green),
+                    ),
+                ],
+              ),
               const SizedBox(height: 30),
 
               ElevatedButton(

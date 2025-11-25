@@ -1,80 +1,115 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:electrical_store_mobile_app/helpers/database_helper.dart';
 import 'package:electrical_store_mobile_app/logic/firebaseServices/product.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/product.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 
 class ProductController {
   final dbHelper = DatabaseHelper.instance;
   final firebase = FirebaseProductService();
 
-  // ----------- CHECK INTERNET ------------
   Future<bool> hasInternet() async {
-    var c = await Connectivity().checkConnectivity();
-    return c != ConnectivityResult.none;
+     var localConnection = await Connectivity().checkConnectivity();
+    if (localConnection == ConnectivityResult.none) {
+      return false;
+    }
+
+    try {
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 5));
+
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        return true;
+      } else {
+        return false;
+      }
+    } on SocketException catch (_) {
+      return false;
+    } on TimeoutException catch (_) {
+      return false;
+    }
   }
 
-  // ----------- ADD PRODUCT ------------
-Future<void> createProduct(Product product) async {
-  final db = await dbHelper.database;
-  bool online = await hasInternet();
+ 
+  final cloudinary = CloudinaryPublic('dohw3bunv', 'products', cache: false);
 
-  // 🔥 إصلاح المشكلة: تجنّب استخدام ! عندما يكون null
-  final String id = (product.id == null || product.id!.isEmpty)
-      ? "p_${Random().nextInt(999999999)}"
-      : product.id!;
+  Future<String> uploadImageToCloudinary(File image) async {
+    try {
+      CloudinaryResponse response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(
+          image.path, // مسار الصورة
+          resourceType: CloudinaryResourceType.Image,
+          folder: 'products',
+        ),
+      );
 
-  final data = product.toMap()..["id"] = id;
+      if (response.secureUrl == null) {
+        throw Exception("فشل الحصول على رابط الصورة الآمن من Cloudinary");
+      }
 
-  if (online) {
+      return response.secureUrl!;
+    } catch (e) {
+      throw Exception("فشل رفع الصورة: ${e.toString()}");
+    }
+  }
+
+  Future<void> createProduct(Product product, File? imageFile) async {
+    final db = await dbHelper.database;
+
+    final String id = (product.id == null || product.id!.isEmpty)
+        ? "p_${Random().nextInt(999999999)}"
+        : product.id!;
+
+    if (imageFile != null) {
+      String imageUrl = await uploadImageToCloudinary(imageFile);
+      product.image = imageUrl;
+    }
+
+    final data = product.toMap()..["id"] = id;
+
     await firebase.addProduct(data);
     data["syncStatus"] = 0;
-  } else {
-    data["syncStatus"] = 1;
+
+    // تخزين البيانات محليا sqllite بعد نجاح رفعها على الإنترنت
+    await db.insert(
+      "products",
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  await db.insert(
-    "products",
-    data,
-    conflictAlgorithm: ConflictAlgorithm.replace,
-  );
-}
-
-  // ----------- UPDATE PRODUCT ------------
-  Future<void> updateProduct(Product product) async {
+  Future<void> updateProduct(Product product, File? newImageFile) async {
     final db = await dbHelper.database;
-    bool online = await hasInternet();
+
+    if (newImageFile != null) {
+      try {
+        // رفع الصورة الجديدة
+        String newImageUrl = await uploadImageToCloudinary(newImageFile);
+        // تحديث رابط الصورة في المنتج
+        product.image = newImageUrl;
+      } catch (e) {
+        throw Exception("فشل رفع الصورة الجديدة: ${e.toString()}");
+      }
+    }
 
     final data = product.toMap();
 
-    if (online) {
-      await firebase.updateProduct(data);
-      data["syncStatus"] = 0;
-    } else {
-      data["syncStatus"] = 1;
-    }
+    await firebase.updateProduct(data);
 
+    // تحديث قاعدة البيانات المحلية
     await db.update("products", data, where: "id = ?", whereArgs: [product.id]);
   }
 
-  // ----------- DELETE PRODUCT ------------
   Future<void> deleteProduct(String id) async {
     final db = await dbHelper.database;
-    bool online = await hasInternet();
 
-    if (online) {
-      await firebase.deleteProduct(id);
-      await db.delete("products", where: "id = ?", whereArgs: [id]);
-    } else {
-      // نحذفه محلياً فقط
-      await db.update(
-        "products",
-        {"syncStatus": 1},
-        where: "id = ?",
-        whereArgs: [id],
-      );
-    }
+    await firebase.deleteProduct(id);
+    await db.delete("products", where: "id = ?", whereArgs: [id]);
   }
 
   Future<List<Product>> readAllProducts({String? userId}) async {
@@ -82,7 +117,6 @@ Future<void> createProduct(Product product) async {
 
     if (online) {
       try {
-        // Fetch from Firestore
         final products = await firebase.fetchProducts();
 
         // Save to local SQLite
@@ -97,7 +131,6 @@ Future<void> createProduct(Product product) async {
 
         return products;
       } catch (e) {
-        print("Error fetching from Firestore: $e");
         return _getProductsFromLocal(userId);
       }
     } else {
@@ -124,19 +157,19 @@ Future<void> createProduct(Product product) async {
 
     return result.map((e) => Product.fromMap(e)).toList();
   }
-// ----------- SEARCH PRODUCTS (local DB) ------------
-Future<List<Product>> searchProducts(String query, {String? userId}) async {
-  final db = await dbHelper.database;
 
-  if (query.isEmpty) {
-    // إذا البحث فارغ، ارجع كل المنتجات
-    return readAllProducts( );
-  }
+   Future<List<Product>> searchProducts(String query, {String? userId}) async {
+    final db = await dbHelper.database;
 
-  final q = '%${query.toLowerCase()}%';
-  final id = userId?.isNotEmpty == true ? userId : null;
+    if (query.isEmpty) {
+      // إذا البحث فارغ رح ترجع كل المنتجات
+      return readAllProducts();
+    }
 
-  final result = await db.rawQuery("""
+    final q = '%${query.toLowerCase()}%';
+    final id = userId?.isNotEmpty == true ? userId : null;
+
+    final result = await db.rawQuery("""
     SELECT 
       p.*, 
       CASE 
@@ -152,11 +185,9 @@ Future<List<Product>> searchProducts(String query, {String? userId}) async {
        OR LOWER(p.category) LIKE ?
   """, id != null ? [id, q, q, q] : [q, q, q]);
 
-  return result.map((e) => Product.fromMap(e)).toList();
-}
+    return result.map((e) => Product.fromMap(e)).toList();
+  }
 
-
-  // ----------- SYNC OFFLINE DATA ------------
   Future<void> syncPendingProducts() async {
     final db = await dbHelper.database;
 

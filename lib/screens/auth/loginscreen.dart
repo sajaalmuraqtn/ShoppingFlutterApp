@@ -86,8 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 40),
 
-                // البريد الإلكتروني
-                TextFormField(
+                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: "البريد الإلكتروني",
@@ -106,8 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // كلمة المرور
-                TextFormField(
+                 TextFormField(
                   controller: _passwordController,
                   decoration: const InputDecoration(labelText: "كلمة المرور"),
                   obscureText: true,
@@ -125,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 50),
 
                 _isLoading
-                    ? const CircularProgressIndicator()
+                    ? const CircularProgressIndicator(color:kPrimaryColor)
                     : ElevatedButton(
                         onPressed: _login,
                         child: const Text(
@@ -136,8 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // 🔥 زر إنشاء حساب جديد
-                Row(
+                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("ليس لديك حساب؟"),

@@ -29,14 +29,11 @@ Future<bool> register(User user) async {
   return true;
 }
 
-  // تسجيل الدخول
-  Future<Map<String, dynamic>?> login(String email, String password) async {
-    // 1) محاولة تسجيل الدخول Firebase
-    final remoteUser = await firebase.login(email, password);
+   Future<Map<String, dynamic>?> login(String email, String password) async {
+     final remoteUser = await firebase.login(email, password);
 
     if (remoteUser != null) {
-      // إذا نجح → خزنه محليًا
-      final db = await dbHelper.database;
+       final db = await dbHelper.database;
 
       await db.delete("users", where: "email = ?", whereArgs: [email]);
       await db.insert("users", {
@@ -47,7 +44,7 @@ Future<bool> register(User user) async {
       return remoteUser;
     }
 
-    // 2) في حال عدم الاتصال → تسجيل دخول محلي
+    // 2) في حال عدم الاتصال يسجيل دخول sqlite
     final db = await dbHelper.database;
 
     final result = await db.query(

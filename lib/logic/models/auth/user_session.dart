@@ -26,20 +26,17 @@ class UserSession {
     await prefs.setBool(_keyIsLoggedIn, true);
   }
 
-  /// جلب الـ User ID
-  static Future<String?> getUserId() async {
+   static Future<String?> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUserId);
   }
 
-  /// جلب إيميل المستخدم
-  static Future<String?> getUserEmail() async {
+   static Future<String?> getUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUserEmail);
   }
 
-  /// جلب اسم المستخدم
-  static Future<String?> getUserName() async {
+   static Future<String?> getUserName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUserName);
   }

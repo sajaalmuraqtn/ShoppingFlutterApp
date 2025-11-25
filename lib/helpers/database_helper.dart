@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
+ 
 class DatabaseHelper {
   DatabaseHelper._();
   static final DatabaseHelper instance = DatabaseHelper._();
@@ -54,8 +53,7 @@ class DatabaseHelper {
     )
     """);
 
-    // Indexes
-    await db.execute("CREATE INDEX idx_user_email ON users(email);");
+     await db.execute("CREATE INDEX idx_user_email ON users(email);");
     await db.execute("CREATE INDEX idx_likes_user ON likes(userId);");
     await db.execute("CREATE INDEX idx_likes_product ON likes(productId);");
 

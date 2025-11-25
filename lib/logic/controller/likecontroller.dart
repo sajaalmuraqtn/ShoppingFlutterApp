@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:electrical_store_mobile_app/helpers/database_helper.dart';
 import 'package:electrical_store_mobile_app/logic/models/auth/user_session.dart';
@@ -8,13 +11,30 @@ import 'package:sqflite/sqflite.dart';
 class LikeController {
   static final likesRef = FirebaseFirestore.instance.collection("likes");
 
-  // ======== CHECK INTERNET ========
-  static Future<bool> hasInternet() async {
-    return (await Connectivity().checkConnectivity()) != ConnectivityResult.none;
+   static  Future<bool> hasInternet() async {
+     var localConnection = await Connectivity().checkConnectivity();
+    if (localConnection == ConnectivityResult.none) {
+      return false;
+    }
+
+    try {
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 5));
+
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        return true;
+      } else {
+        return false;
+      }
+    } on SocketException catch (_) {
+      return false;
+    } on TimeoutException catch (_) {
+      return false;
+    }
   }
 
-  // ======== READ LIKES (ONLINE or OFFLINE) ========
-  static Future<List<String>> _getOnlineLikedIds(String userId) async {
+   static Future<List<String>> _getOnlineLikedIds(String userId) async {
     final doc = await likesRef.doc(userId).get();
 
     if (!doc.exists) return [];
@@ -31,8 +51,7 @@ class LikeController {
     if (online) {
       likedIds = await _getOnlineLikedIds(userId);
     } else {
-      // read from local SQLite
-      final db = await DatabaseHelper.instance.database;
+       final db = await DatabaseHelper.instance.database;
       final result = await db.rawQuery("""
         SELECT p.*, 1 AS isLiked
         FROM products p
@@ -58,13 +77,11 @@ class LikeController {
     }).toList();
   }
 
-  // ======== TOGGLE LIKE ========
-  static Future<void> toggleLike(String userId, Product product) async {
+   static Future<void> toggleLike(String userId, Product product) async {
     final hasNet = await hasInternet();
     final db = await DatabaseHelper.instance.database;
 
-    // (1) Always update local SQLite
-    final check = await db.query(
+     final check = await db.query(
       "likes",
       where: "userId = ? AND productId = ?",
       whereArgs: [userId, product.id],
@@ -82,8 +99,7 @@ class LikeController {
       product.isLiked = false;
     }
 
-    // (2) Update Firestore if online
-    if (hasNet) {
+     if (hasNet) {
       final doc = await likesRef.doc(userId).get();
 
       List products = [];
@@ -101,8 +117,7 @@ class LikeController {
     }
   }
 
-  // ======== SYNC LOCAL → FIRESTORE ========
-  static Future<void> syncLikesToFirestore() async {
+   static Future<void> syncLikesToFirestore() async {
     final hasNet = await hasInternet();
     if (!hasNet) return;
 
@@ -120,8 +135,7 @@ class LikeController {
     }, SetOptions(merge: true));
   }
 
-  // ======== GET COUNT ========
-  static Future<int> getLikesCount(String userId) async {
+   static Future<int> getLikesCount(String userId) async {
     final online = await hasInternet();
 
     if (online) {
@@ -150,19 +164,16 @@ class LikeController {
 
   return result.isNotEmpty;
 }
-// ======== GET NUMBER OF LIKES FOR A PRODUCT ========
-  static Future<int> getProductLikesCount(String productId) async {
+   static Future<int> getProductLikesCount(String productId) async {
     final db = await DatabaseHelper.instance.database;
 
-    // أولًا: حساب عدد اللايكات محليًا
-    final localResult = await db.rawQuery(
+     final localResult = await db.rawQuery(
       "SELECT COUNT(*) as cnt FROM likes WHERE productId = ?",
       [productId],
     );
     int count = Sqflite.firstIntValue(localResult) ?? 0;
 
-    // إذا متصل بالإنترنت، تحديث العدد من Firestore
-    if (await hasInternet()) {
+     if (await hasInternet()) {
       final likesSnapshot = await FirebaseFirestore.instance
           .collection("likes")
           .where("products", arrayContains: productId)

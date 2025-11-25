@@ -3,6 +3,7 @@ import 'package:electrical_store_mobile_app/helpers/constants.dart';
 import 'package:electrical_store_mobile_app/screens/adminproductscreens/addproductscreen.dart';
 import 'package:electrical_store_mobile_app/screens/adminproductscreens/updateproductscreen.dart';
 import 'package:electrical_store_mobile_app/screens/user/profilescreen.dart';
+import 'package:electrical_store_mobile_app/screens/userscreens/detailsScreen.dart';
 import 'package:flutter/material.dart';
 import '../../logic/models/product.dart';
 import '../../logic/controller/product_controller.dart';
@@ -16,6 +17,24 @@ class AdminProductsScreen extends StatefulWidget {
 
 class _AdminProductsScreenState extends State<AdminProductsScreen> {
   final ProductController _controller = ProductController();
+
+  Future<bool> checkInternetAndNotify() async {
+     final isOnline = await _controller.hasInternet();
+    print("internet isssssssssss $isOnline");
+
+    if (!isOnline) {
+      // إظهار رسالة الخطأ إذا لم يكن متصل 
+ 
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("يجب توفر اتصال بالإنترنت لإتمام هذه العملية."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false; // لا يوجد إنترنت
+    }
+    return true; // يوجد إنترنت
+  }
 
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
@@ -53,9 +72,12 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: const Text("لوحة تحكم المنتجات", style: TextStyle(color: kBackgroundColor)),
+        title: const Text(
+          "لوحة تحكم المنتجات",
+          style: TextStyle(color: kBackgroundColor),
+        ),
         backgroundColor: kPrimaryColor,
-          actions: [
+        actions: [
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -63,7 +85,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                 MaterialPageRoute(builder: (_) => ProfileScreen()),
               );
             },
-            icon: const Icon(Icons.person_rounded,color: kBackgroundColor),
+            icon: const Icon(Icons.person_rounded, color: kBackgroundColor),
           ),
         ],
       ),
@@ -74,7 +96,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
             child: TextField(
               decoration: const InputDecoration(
                 hintText: "ابحث عن منتج أو تصنيف",
-                prefixIcon: Icon(Icons.search,color: kPrimaryColor,),
+                prefixIcon: Icon(Icons.search, color: kPrimaryColor),
                 border: OutlineInputBorder(),
               ),
               onChanged: _searchProducts,
@@ -82,25 +104,29 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color:kPrimaryColor))
                 : _filteredProducts.isEmpty
-                    ? const Center(child: Text("لا توجد منتجات"))
-                    : GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                ? const Center(child: Text("لا توجد منتجات"))
+                : GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
                           childAspectRatio: 0.65,
                         ),
-                        itemCount: _filteredProducts.length,
-                        itemBuilder: (context, index) => _buildProductCard(_filteredProducts[index]),
-                      ),
+                    itemCount: _filteredProducts.length,
+                    itemBuilder: (context, index) =>
+                        _buildProductCard(_filteredProducts[index]),
+                  ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          final isOnline = await checkInternetAndNotify();
+          if (!isOnline) return;
           final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AddProductScreen()),
@@ -122,14 +148,18 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
               child: p.image.contains('assets/')
                   ? Image.asset(p.image, fit: BoxFit.contain)
                   : CachedNetworkImage(
                       imageUrl: p.image,
                       fit: BoxFit.contain,
-                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                      placeholder: (context, url) =>
+                          const Center(child: CircularProgressIndicator(color:kPrimaryColor)),
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.error),
                     ),
             ),
           ),
@@ -138,34 +168,75 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Text(p.subTitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                Text(p.category, style: const TextStyle(color: kSecondaryColor)),
-                Text("${p.price} \$", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                Text(
+                  p.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  p.subTitle,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
+                Text(
+                  p.category,
+                  style: const TextStyle(color: kSecondaryColor),
+                ),
+                Text(
+                  "${p.price} \$",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.edit, color: kPrimaryColor),
                       onPressed: () async {
+                        final isOnline = await checkInternetAndNotify();
+                        if (!isOnline) return;
                         final result = await Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => EditProductScreen(product: p)),
+                          MaterialPageRoute(
+                            builder: (_) => EditProductScreen(product: p),
+                          ),
                         );
                         if (result == true) await _loadProducts();
                       },
                     ),
                     IconButton(
+                      icon: const Icon(Icons.remove_red_eye, color: kPrimaryColor),
+                      onPressed: ()   {
+                       Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>  DetailsScreen(product: p),
+                          ),
+                        );
+                       },
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () async {
+                        final isOnline = await checkInternetAndNotify();
+                        if (!isOnline) return;
                         final confirmed = await showDialog<bool>(
                           context: context,
                           builder: (ctx) => AlertDialog(
                             title: const Text("تأكيد الحذف"),
                             content: Text("هل تريد حذف المنتج \"${p.title}\"؟"),
                             actions: [
-                              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text("لا")),
-                              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text("نعم")),
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(false),
+                                child: const Text("لا"),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                child: const Text("نعم"),
+                              ),
                             ],
                           ),
                         );
