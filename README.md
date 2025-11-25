@@ -8,30 +8,30 @@ It supports both online and offline modes to ensure your data is always safe and
 
 ## 🚀 Features
 
-### Add, edit, and delete products.
+- Add, edit, and delete products.
 
-### Store product data locally using SQLite.
+- Store product data locally using SQLite.
 
-### Auto-sync data with Firebase Firestore whenever internet becomes available.
+- Auto-sync data with Firebase Firestore whenever internet becomes available.
 
-### Upload product images to Cloudinary.
+- Upload product images to Cloudinary.
 
-### Offline mode with pending sync queue.
+- Offline mode with pending sync queue.
 
-### Check network status using connectivity_plus.
+- Check network status using connectivity_plus.
 
-### Clean project architecture: MVC + Controller Pattern.
+- Clean project architecture: MVC + Controller Pattern.
 
-### Simple, fast, and responsive UI for product management.
+- Simple, fast, and responsive UI for product management.
 
 ## 📱 Technologies Used
 ### 🔹 Flutter
 
 Used to build the entire UI and app logic with smooth Material Design components.
 
-### 🔹 SQLite – Local Database
+## 🔹 SQLite – Local Database
 
-- The local database is responsible for:
+### The local database is responsible for:
 
 - Storing all product data offline.
 
@@ -44,7 +44,7 @@ Used to build the entire UI and app logic with smooth Material Design components
 
 The app uses a hybrid Offline-First architecture:
 
-✔ When Internet is available:
+### ✔ When Internet is available:
 
 - User adds a product.
 
@@ -60,7 +60,7 @@ Product is stored locally only in SQLite with syncStatus = 1.
 
 No image upload is done.
 
-When internet returns:
+### When internet returns:
 
 - App detects connectivity.
 
@@ -68,7 +68,7 @@ When internet returns:
 
 - Updates syncStatus to 0.
 
-This ensures zero data loss and a smooth offline-first experience.
+- This ensures zero data loss and a smooth offline-first experience.
 
 ### 🔹 Firebase Firestore
 
@@ -84,7 +84,7 @@ This ensures zero data loss and a smooth offline-first experience.
 
 Used to handle image uploading, returning a secure image URL stored in both SQLite and Firebase.
 
-Benefits:
+### Benefits:
 
 - Fast global CDN.
 
